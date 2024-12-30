@@ -8,6 +8,9 @@ use url::Url;
 #[command(version, about, long_about = None)]
 struct Cli {
     url: Url,
+    /// Provide the request body here
+    #[arg(long)]
+    data: Option<String>,
     /// Provide the request body in $EDITOR
     #[arg(long)]
     editor: bool,
@@ -18,7 +21,9 @@ async fn main() -> Result<()> {
     env_logger::init();
     let args = Cli::parse();
     let client = reqwest::Client::builder().http2_prior_knowledge().build()?;
-    let body = if args.editor {
+    let body = if let Some(data) = args.data {
+        Some(data)
+    } else if args.editor {
         let content = edit::edit("")?;
         Some(content)
     } else {
