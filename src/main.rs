@@ -5,6 +5,7 @@ use colored::Colorize;
 use url::Url;
 
 #[derive(Parser)]
+#[command(version, about, long_about = None)]
 struct Cli {
     url: Url,
     /// Provide the request body in $EDITOR

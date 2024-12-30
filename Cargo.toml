@@ -6,7 +6,7 @@ edition = "2021"
 keywords = ["curl", "http", "grpc"]
 license = "AGPL-3.0-only"
 name = "icurl"
-version = "0.1.0"
+version = "0.1.1"
 
 [profile.release]
 strip = true
