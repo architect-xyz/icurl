@@ -1,11 +1,11 @@
 [package]
 authors = ["Architect Financial Technologies LLC"]
 categories = ["command-line-utilities"]
-description = "pURL"
+description = "i-curl: interactive curl"
 edition = "2021"
 keywords = ["curl", "http", "grpc"]
 license = "AGPL-3.0-only"
-name = "purl"
+name = "icurl"
 version = "0.1.0"
 
 [profile.release]
