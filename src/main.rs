@@ -2,6 +2,7 @@ use anyhow::{bail, Context, Result};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use clap::Parser;
 use colored::Colorize;
+use futures::StreamExt;
 use std::path::PathBuf;
 use url::Url;
 
@@ -23,6 +24,9 @@ struct Cli {
     /// location will be guessed from the certfile location.
     #[arg(long)]
     key: Option<PathBuf>,
+    /// URL/endpoint is gRPC server streaming
+    #[arg(long = "stream")]
+    server_streaming: bool,
 }
 
 #[tokio::main]
@@ -118,17 +122,46 @@ async fn main() -> Result<()> {
                 eprintln!("{}", format!("GRPC {} {}", code, code_reason).red().bold());
             }
         }
-        let mut buf = res.bytes().await?;
-        if buf.len() < 5 {
+        if args.server_streaming {
+            handle_server_streaming_response(res).await?;
+        } else {
+            handle_unary_response(res).await?;
+        }
+    }
+    Ok(())
+}
+
+async fn handle_unary_response(res: reqwest::Response) -> Result<()> {
+    let mut buf = res.bytes().await?;
+    if buf.len() < 5 {
+        bail!("invalid Length-Prefixed-Message, expected at least 5 bytes");
+    }
+    let _compressed = buf.get_u8();
+    let len = buf.get_u32();
+    if len == 0 {
+        eprintln!("WARNING: empty response");
+        return Ok(());
+    }
+    let body = buf.get(..).unwrap();
+    let text = std::str::from_utf8(body)?;
+    println!("{}", text);
+    Ok(())
+}
+
+async fn handle_server_streaming_response(res: reqwest::Response) -> Result<()> {
+    let mut stream = res.bytes_stream();
+    while let Some(res) = stream.next().await {
+        let mut frame = res?;
+        if frame.len() < 5 {
             bail!("invalid Length-Prefixed-Message, expected at least 5 bytes");
         }
-        let _compressed = buf.get_u8();
-        let len = buf.get_u32();
+        let _compressed = frame.get_u8();
+        let len = frame.get_u32();
         if len == 0 {
             eprintln!("WARNING: empty response");
             return Ok(());
         }
-        let body = buf.get(..).unwrap();
+        let body = frame.get(..).unwrap();
         let text = std::str::from_utf8(body)?;
         println!("{}", text);
     }
